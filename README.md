@@ -4,18 +4,13 @@ Penta is a python based WM.
 It depends on wm-utils directly and is designed to run on top of a no-wm session.
 Below is an example of what a .xinitrc would look like with penta and no-wm.
 
-#!/bin/sh
 while ! xprop -root | grep -q Free; do sleep 1; done
-# Set .xresources
 xrdb -merge .xresources
-# Set keybindings
 xbindkeys
-# Start penta
 bash "/home/vibex/Documents/penta/mouseFocus.sh" &
 bash "/home/vibex/Documents/penta/focusColour.sh" &
 bash "/home/vibex/Documents/penta/wewMessanger.sh" &
 python2 "/home/vibex/Documents/penta/penta.py" &
-# Set an empty x session
 exec x-session
 
 Interact

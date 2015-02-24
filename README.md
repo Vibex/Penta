@@ -2,16 +2,6 @@ Penta
 =====
 Penta is a python based WM.
 It depends on wm-utils directly and is designed to run on top of a no-wm session.
-Below is an example of what a .xinitrc would look like with penta and no-wm.
-
-while ! xprop -root | grep -q Free; do sleep 1; done
-xrdb -merge .xresources
-xbindkeys
-bash "/home/vibex/Documents/penta/mouseFocus.sh" &
-bash "/home/vibex/Documents/penta/focusColour.sh" &
-bash "/home/vibex/Documents/penta/wewMessanger.sh" &
-python2 "/home/vibex/Documents/penta/penta.py" &
-exec x-session
 
 Interact
 --------
@@ -30,6 +20,6 @@ The messages that Penta currently recognizes are:
 Tile
 ----
 Penta currently supports three different tiling modes.
-0 = Floating
-1 = LStack
-2 = Monocole
+* 0 = Floating
+* 1 = LStack
+* 2 = Monocole

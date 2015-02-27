@@ -48,8 +48,12 @@ class Window:
         self.floatW = w
         self.floatH = h
 
+        # Rules for the window
+        self.rules = []
+
+    # Representation of a window. This is what is outputed to the output file
     def __repr__(self):
-        return self.wid + "_" + "(" + str(self.x) + "," + str(self.y) + "," + str(self.w) + "," + str(self.h) + ")"
+        return self.wid + "_" + "(" + str(self.x) + "," + str(self.y) + "," + str(self.w) + "," + str(self.h) + ")_" + self.rules.__repr__()
 
     # Int Int Int Int -> [Int, Int, Int, Int]
     # Takes in geometry cordinates and places the window at that location.
@@ -83,6 +87,13 @@ class Window:
     # Returns the new position of the window.
     def hide(self, monW):
         return self.positionA(monW, 0, max(self.floatW, self.w), max(self.floatH, self.h))
+    
+    # Place the window in a Psuedo tile manner
+    # Returns the new position of the window.
+    def psuedo(self, x, y, w, h):
+        x = x + (w / 2) - (self.floatW / 2)
+        y = y + (h / 2) - (self.floatH / 2)
+        return self.positionA(x, y, self.floatW, self.floatH)
 
     # Focus the window and bring it to the top of the stack. Also place the cursor in the bottom right corner.
     def focus(self):
@@ -111,6 +122,25 @@ class Window:
     # Sets the current tag for the window.
     def setTag(self, tag):
         self.tag = tag
+
+    # String -> 
+    # Toggles a rule of the window
+    def togRule(self, togrule):
+        count = 0
+        for rule in self.rules:
+            if rule == togrule:
+                self.rules.pop(count)
+                return
+        self.rules.append(togrule)
+    
+    # String -> boolean
+    # Checks if the window has a rule set
+    def checkRule(self, checkrule):
+        for rule in self.rules:
+            if rule == checkrule:
+                return True
+        return False
+
 
 
 class Manager:
@@ -184,7 +214,7 @@ class Manager:
             data = message.split(':')[1]
             print message
         except:
-            print "ERROR WITH MESSAGE:  '" + message + "'"
+            print "IMPROPER PARAMS:  '" + message + "'"
             return
         # If it was a create message and the window is not in the list yet, then add it to the low.
         if event == "CREATE":
@@ -195,7 +225,7 @@ class Manager:
                 data4 = data.split(',')[3]
                 data5 = data.split(',')[4]
             except:
-                print "ERROR WITH MESSAGE:  '" + message + "'"
+                print "IMPROPER PARAMS:  '" + message + "'"
                 return
             # Check if its already in the list.
             if self.inListAt(data1) == -1:
@@ -210,43 +240,64 @@ class Manager:
                 # If no tags are active then send it to the first tag.
                 if not found:
                     count = 0
-                win = Window(data1, count, data2, data3, data4, data5)
+                win = Window(data1, count, int(data2), int(data3), int(data4), int(data5))
                 self.low.append(win)
                 self.retile()
+
         # If it was a destroy message, and the window is in the low, then remove it.
         elif event == "DESTROY":
             place = self.inListAt(data)
             if place != -1:
                 self.low.pop(place)
                 self.retile()
+
         # If it was a next message switch focus to the next window.
         elif event == "NEXT":
             self.next(data)
+
         # If it was a prev message switch focus to the prev window.
         elif event == "PREV":
             self.prev(data)
+
+        # If it was a togrule message it toggles the rule state on the window
+        elif event == "TOGRULE":
+            try:
+                data1 = data.split(',')[0]
+                data2 = data.split(',')[1]
+            except:
+                print "IMPROPER PARAMS:  '" + message + "'"
+                return
+            place = self.inListAt(data1)
+            if place != -1:
+                self.low[place].togRule(data2)
+                self.retile()
+
         # If it was a wintag message then send a window to a tag.
         elif event == "WINTAG":
             try:
                 data1 = data.split(',')[0]
                 data2 = data.split(',')[1]
             except:
-                print "ERROR WITH MESSAGE:  '" + message + "'"
+                print "IMPROPER PARAMS:  '" + message + "'"
                 return
             # Check to see if the window is in the list.
             place = self.inListAt(data1)
             if place != -1:
                 self.low[place].setTag(int(data2))
-            self.retile()
+                self.retile()
+        
+        # If it was a togtag message it toggles the state of the tag
         elif event == "TOGTAG":
                 self.togTag(int(data))
                 self.retile()
+    
+        # If it wasa tile message it changes the toggle state of the window
         elif event == "TILE":
             # Change the tile method
             self.tiled = int(data)
             # Retile everything
             self.retile()
-    
+
     # Returns a list of all windows that are on operational tags.
     def workWithWins(self):
         workingList = []
@@ -297,10 +348,25 @@ class Manager:
     
     # Retiles the windows.
     def retile(self):
+        # Split the low into two lists based on their use
         workingList = self.workWithWins()
         otherList = self.otherWins()
+        # Hide all wins that aren't going to be tiled
         for win in otherList:
             win.hide(self.monw)
+        # If the win has the float rule set, then float it
+        # If the win has the full rule set, then fullscreen it
+        # Then remove it from the tile list
+        count = 0
+        for win in workingList:
+            if win.checkRule('float'):
+                workingList.pop(count)
+                win.float()
+            elif win.checkRule('full'):
+                workingList.pop(count)
+                win.positionA(0 - self.bor, 0 - self.bor, self.monw, self.monh)
+            count += 1
+        # Tile the rest of the windows based on the tile mode
         if self.tiled == 1:
             # LStack
             self.lStack(workingList)
@@ -354,7 +420,10 @@ class Manager:
                         y1 = y
                         w1 = self.master - (self.bor * 2)
                         h1 = h - (self.bor * 2)
-                        win.positionA(x1, y1, w1, h1)
+                        if win.checkRule('psuedo'):
+                            win.psuedo(x1, y1, w1, h1)
+                        else:
+                            win.positionA(x1, y1, w1, h1)
                         # Create the geometry for the sub windows
                         x2 = x + w1 + (self.bor * 2) + self.wingap
                         y2 = y
@@ -364,7 +433,10 @@ class Manager:
                         first = False
                     else:
                         # Place the sub windows
-                        win.positionA(x2, y2 + (count * (h2 + (self.wingap * 2))), w2, h2)
+                        if win.checkRule('psuedo'):
+                            win.psuedo(x2, y2 + (count * (h2 + (self.wingap * 2))), w2, h2)
+                        else:
+                            win.positionA(x2, y2 + (count * (h2 + (self.wingap * 2))), w2, h2)
                         count += 1
     
     # Places all windows in there float positons.

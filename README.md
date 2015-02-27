@@ -13,6 +13,7 @@ The messages that Penta currently recognizes are:
 * DESTROY: wid                     Removes a window being managed by Penta.
 * NEXT: wid                        Goes to the next window in the list.
 * PREV: wid                        Goes to the prev window in the list.
+* TOGRULE: wid, rule               Applies a rule to a window.
 * WINTAG: wid, tag                 Moves a window to a tag.
 * TOGTAG: tag                      Toggels the activation of a tag.
 * TILE: mode                       Sets Penta to a tile mode.
@@ -23,3 +24,10 @@ Penta currently supports three different tiling modes.
 * 0 = Floating
 * 1 = LStack
 * 2 = Monocole
+
+RULE
+----
+Rules can be applied to windows and effect how windows are tiled.
+* full = full screen the window
+* float = makes the window always floating
+* psuedo = applys a psuedo tile mode (float size at tiled pos)

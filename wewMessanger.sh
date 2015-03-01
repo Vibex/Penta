@@ -9,11 +9,18 @@ wew -a | while IFS=: read message; do
 	event=$(echo $message | cut -d ":" -f 1)
 	wid=$(echo $message | cut -d ":" -f 2)
 	case $event in
-		# You could use a clause like this one to automatically add programs
-		# There are some problems with it because it will add even no display windows
-		# Instead I use hotkeys to add individual windows to the WM
 		# XCB_CREATE_NOTIFY
-		# 16) echo "CREATE:$wid" > "$FIFO";;
+		# This was the best way I could come up with to add windows when they are created. 
+		# At first I tried using just the message from wew, but then you have lots of fake sub windows with programs like firefox.
+		# Then I tried checking the windows against the lsw list, but the list is updated slower then wew. 
+		# So the best solution was to just retry and add all the windows in lsw when a new window is created.
+		# But then I needed to add the sleep command in because the messages were being sent to quickly to the fifo and penta was getting baffled.
+		# So here is the solution I have arrived at. Please someone come up with a better solution.
+		16) for win in $(lsw); do
+			echo "CREATE:$win, $(wattr x $win), $(wattr y $win), $(wattr w $win), $(wattr h $win)" > "$FIFO"
+			sleep 0.01
+		done;;
+		# echo "CREATE:$wid" > "$FIFO";;
 		# XCB_CREATE_DESTROY
 		17) echo "DESTROY:$wid" > "$FIFO";;
 	esac

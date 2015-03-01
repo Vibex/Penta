@@ -23,6 +23,8 @@ BOR = 2
 WINGAP = 8
 # This is the gap between the window and the edge of the screen.
 MONGAP = 16
+# This is the number of tags that Penta manages.
+TAGNUM = 5
 ##### END
 
 
@@ -87,20 +89,35 @@ class Window:
     # Returns the new position of the window.
     def hide(self, monW):
         return self.positionA(monW, 0, max(self.floatW, self.w), max(self.floatH, self.h))
+
+    # Int, Int, Int -> [Int, Int, Int, Int]
+    # Place a window in a corner
+    def corner(self, corner, monw, monh, float=False):
+        x = 0
+        y = 0
+        if corner == 1 or corner == 4:
+            x = monw - self.floatW
+        if corner == 3 or corner == 4:
+            y = monh - self.floatH
+        return self.positionA(x, y, self.floatW, self.floatH, float)
     
-    # Place the window in a Psuedo tile manner
+    # Center a window on an area
     # Returns the new position of the window.
-    def psuedo(self, x, y, w, h):
+    def psuedo(self, x, y, w, h, float=False):
         x = x + (w / 2) - (self.floatW / 2)
         y = y + (h / 2) - (self.floatH / 2)
-        return self.positionA(x, y, self.floatW, self.floatH)
+        return self.positionA(x, y, self.floatW, self.floatH, float)
 
     # Focus the window and bring it to the top of the stack. Also place the cursor in the bottom right corner.
     def focus(self):
         call(["chwso", "-r", self.wid])
-        call(["wmp", str(self.x + self.w), str(self.y + self.h)])
+        self.mouseCorner()
         call(["wtf", self.wid])
-    
+
+    # Place the cursor in the bottom corner of the window
+    def mouseCorner(self):
+        call(["wmp", str(self.x + self.w), str(self.y + self.h)])
+
     # String(or Int) String -> None
     # The first string must be a number.
     # The second string must be a coulour code.
@@ -144,7 +161,7 @@ class Window:
 
 
 class Manager:
-    def __init__(self, fifo, output, monw, monh, master, tbar, bbar, bor, wingap, mongap):
+    def __init__(self, fifo, output, monw, monh, master, tbar, bbar, bor, wingap, mongap, tagnum):
         self.fifo = fifo
         self.output = output
         self.monw = monw
@@ -155,12 +172,21 @@ class Manager:
         self.bor = bor
         self.wingap = wingap
         self.mongap = mongap
+        self.tagnum = tagnum
 
         # A List of all the Windows that are being managed
         self.low=[]
 
         # A list of all the tags in the wm.
-        self.tags=[True, False, False, False, False]
+        self.tags = []
+        first = True
+        for count in range(self.tagnum):
+            if first:
+                add = True
+                first = False
+            else:
+                add = False
+            self.tags.append(add)
 
         # This variable represents what tiling mode is currently active.
         # 0 = Float
@@ -214,7 +240,7 @@ class Manager:
             data = message.split(':')[1]
             print message
         except:
-            print "IMPROPER PARAMS:  '" + message + "'"
+            print "IMPROPER MESSAGE:  '" + message + "'"
             return
         # If it was a create message and the window is not in the list yet, then add it to the low.
         if event == "CREATE":
@@ -249,6 +275,68 @@ class Manager:
             place = self.inListAt(data)
             if place != -1:
                 self.low.pop(place)
+                self.retile()
+
+        # If it was a movewina message then move the window to an absolute position
+        elif event == "WINMOVEA":
+            try:
+                data1 = data.split(',')[0]
+                data2 = data.split(',')[1]
+                data3 = data.split(',')[2]
+                data4 = data.split(',')[3]
+                data5 = data.split(',')[4]
+            except:
+                print "IMPROPER PARAMS:  '" + message + "'"
+                return
+            place = self.inListAt(data1)
+            if place != -1:
+                if self.tiled != 0 and not self.low[place].checkRule('float'):
+                    self.low[place].togRule('float')
+                self.low[place].positionA(int(data2), int(data3), int(data4), int(data5), True)
+                self.low[place].mouseCorner()
+                self.retile()
+        
+        # If it was a movewinr message then move the window relative to the win
+        elif event == "WINMOVER":
+            try:
+                data1 = data.split(',')[0]
+                data2 = data.split(',')[1]
+                data3 = data.split(',')[2]
+                data4 = data.split(',')[3]
+                data5 = data.split(',')[4]
+            except:
+                print "IMPROPER PARAMS:  '" + message + "'"
+                return
+            place = self.inListAt(data1)
+            if place != -1:
+                if self.tiled != 0 and not self.low[place].checkRule('float'):
+                    self.low[place].togRule('float')
+                self.low[place].positionR(int(data2), int(data3), int(data4),int(data5), True)
+                self.low[place].mouseCorner()
+                self.retile()
+
+        elif event == "WINCORNER":
+            try:
+                data1 = data.split(',')[0]
+                data2 = data.split(',')[1]
+            except:
+                print "IMPROPER PARAMS:  '" + message + "'"
+                return
+            place = self.inListAt(data1)
+            if place != -1:
+                if self.tiled != 0 and not self.low[place].checkRule('float'):
+                    self.low[place].togRule('float')
+                self.low[place].corner(int(data2), self.monw - (self.bor * 2), self.monh - (self.bor * 2), True)
+                self.low[place].mouseCorner()
+                self.retile()
+
+        elif event == "WINCENTER":
+            place = self.inListAt(data)
+            if place != -1:
+                if self.tiled != 0 and not self.low[place].checkRule('float'):
+                    self.low[place].togRule('float')
+                self.low[place].psuedo(0, 0, self.monw, self.monh, True)
+                self.low[place].mouseCorner()
                 self.retile()
 
         # If it was a next message switch focus to the next window.
@@ -454,11 +542,11 @@ class Manager:
             count += 1
 
 ##### MAIN FUNCTION
-def Main(fifo, output, monw, monh, master, tbar, bbar, bor, wingap, mongap):
-    man = Manager(fifo, output, monw, monh, master, tbar, bbar, bor, wingap, mongap)
+def Main(fifo, output, monw, monh, master, tbar, bbar, bor, wingap, mongap, tagnum):
+    man = Manager(fifo, output, monw, monh, master, tbar, bbar, bor, wingap, mongap, tagnum)
     while True:
         man.read()
         man.write()
 
 ##### CALL MAIN
-Main(FIFO, OUTPUT, MONW, MONH, MASTER, TBAR, BBAR, BOR, WINGAP, MONGAP)
+Main(FIFO, OUTPUT, MONW, MONH, MASTER, TBAR, BBAR, BOR, WINGAP, MONGAP, TAGNUM)

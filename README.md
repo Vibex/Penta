@@ -6,10 +6,10 @@ It depends on wm-utils directly and is designed to run on top of a no-wm session
 FIFO
 ----
 Penta has no direct interaction. It relies on sending messages to a fifo. Penta then reads those messages and acts upon them.
-All messages follow this format. First is the event (in all caps). Then a colon ":". Next comes a set of params. These are all desermined by the specific menu. They are seperated by a comma "," and NOTHING ELSE.
+All messages follow this format. First is the event (in all caps). Then a colon ":". Next comes a set of params. These are all desermined by the message. They are seperated by a comma "," and NOTHING ELSE.
 
 The messages that Penta currently recognizes are:
-* CREATE: wid, x, y, w, h = Adds a window to be managed by Penta.
+* CREATE: wid = Adds a window to be managed by Penta.
 * DESTROY: wid = Removes a window being managed by Penta.
 * WINMOVEA: wid, x, y, w, h = Moves a window to an absolute location.
 * WINMOVER: wid, x, y, w, h = Moves a window to a realative location.
@@ -20,6 +20,7 @@ The messages that Penta currently recognizes are:
 * TOGRULE: wid, rule = Applies a rule to a window.
 * WINTAG: wid, tag = Moves a window to a tag.
 * TOGTAG: tag = Toggels the activation of a tag.
+* ONETAG: tag = Set a single tag to have focus.
 * TILE: mode = Sets Penta to a tile mode.
 
 Tile
@@ -31,14 +32,16 @@ Penta currently supports three different tiling modes.
 
 RULES
 -----
-Rules can be applied to windows and effect how windows are tiled.
+Rules can be applied to windows and effect how windows are tiled. Only one rule is active at a time.
 * full = full screen the window
 * float = makes the window always floating
 * psuedo = applys a psuedo tile mode (float size at tiled pos)
 
 TODO
 ----
-* Add manipulation of the list of windows.
+Important things will be added ASAP.
+* Add a manual tiling mode similar to that of herbstluftwm. (IMPORTANT)
+* Add manipulation of the list of windows. (IMPORTANT)
 * Add the ability to dynamicaly create and destroy tags.
 * Add the ability to change the settings on the fly.
 * Tinker around with the code to make it more concise and clean.
